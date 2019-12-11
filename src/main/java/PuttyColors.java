@@ -22,9 +22,9 @@ class ColorTheme {
     Image image;
     Map<String, String> values;
 
-    void parseReg(File f) throws IOException {
+    void parseReg(InputStream s) throws IOException {
         values = new HashMap<>();
-        try (BufferedReader in = new BufferedReader(new FileReader(f))) {
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(s))) {
             String l = in.readLine();
             while (l != null) {
                 if (l.startsWith("\"Colour")) {
@@ -61,24 +61,28 @@ public class PuttyColors {
         Display d = new Display();
 
         log.info("Loading themes");
-        File images_dir = new File(PuttyColors.class.getClassLoader().getResource("images").toURI());
-        Map<Integer, File> m_images = new HashMap<>();
-        for (File f : images_dir.listFiles()) {
-            String name = f.getName();
-            m_images.put(Integer.parseInt(name.substring(0, name.indexOf('.'))), f);
-        }
+        Map<Integer, String> m_images = new HashMap<>();
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(PuttyColors.class.getClassLoader().getResourceAsStream("images/list.txt")))) {
+            String l = in.readLine();
+            while (l != null) {
+                m_images.put(Integer.parseInt(l.substring(0, l.indexOf('.'))), l);
+                l = in.readLine();
+            }
 
-        File themes_dir = new File(PuttyColors.class.getClassLoader().getResource("themes").toURI());
+        }
         themes = new ArrayList<>();
-        for (File f : themes_dir.listFiles()) {
-            String name = f.getName();
-            String _index = name.substring(0, name.indexOf('.'));
-            ColorTheme t = new ColorTheme();
-            t.index = Integer.parseInt(_index.replaceAll("^0+", ""));
-            t.name = name.substring(name.indexOf('.')+1, name.lastIndexOf('.')).strip();
-            t.image = new Image(d, m_images.get(t.index).getAbsolutePath());
-            t.parseReg(f);
-            themes.add(t);
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(PuttyColors.class.getClassLoader().getResourceAsStream("themes/list.txt")))) {
+            String l = in.readLine();
+            while (l != null) {
+                String _index = l.substring(0, l.indexOf('.'));
+                ColorTheme t = new ColorTheme();
+                t.index = Integer.parseInt(_index.replaceAll("^0+", ""));
+                t.name = l.substring(l.indexOf('.')+1, l.lastIndexOf('.')).trim();
+                t.image = new Image(d, PuttyColors.class.getClassLoader().getResourceAsStream("images/" + m_images.get(t.index)));
+                t.parseReg(PuttyColors.class.getClassLoader().getResourceAsStream("themes/" + l));
+                themes.add(t);
+                l = in.readLine();
+            }
         }
 
         log.info("Starting gui");
